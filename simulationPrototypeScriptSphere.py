@@ -81,28 +81,27 @@ def createScene(root):
 	
 	return root
         
+
 class KeyPressedController(Sofa.Core.Controller):
-	"""monitor and control sphere dropping
-	"""     
 	def __init__(self, *args, **kwargs):
-	    Sofa.Core.Controller.__init__(self, *args, **kwargs)
-	    self.iteration = 0
-	    print("\n\n\n KeyPressedController added \n\n\n")
-	    
+		Sofa.Core.Controller.__init__(self, *args, **kwargs)
+		self.iteration = 0
+
 	def onKeypressedEvent(self, event):
+		# Press L key triggers the creation of new objects in the scene
 		if event['key']=='L':
 			self.createNewSphere()
+        
             
 	def createNewSphere(self):
 		root = self.getContext()
 		newSphere = root.addChild('FallingSphere-'+str(self.iteration))
 		newSphere.addObject('EulerImplicitSolver')
 		newSphere.addObject('CGLinearSolver', threshold='1e-09', tolerance='1e-09', iterations='200')
-		#not sure what the rest of position is (quarternion?)
-		MO = newSphere.addObject('MechanicalObject', showObject=True, position=[0.05, 0.05, 0.05, 0, 0, 0, 1], name=f'Partical-{self.iteration}', template='Rigid3d') 
-		Mass = newSphere.addObject('UniformMass', totalMass=0.001)
-		Force = newSphere.addObject('ConstantForceField', name='CFF', totalForce=[0,0,0,0,0,0])
-		Sphere = newSphere.addObject('SphereCollisionModel', name="SCM", radius=0.02)
+		MO = newSphere.addObject('MechanicalObject', showObject=True, position=[0.05, 0.5, 0.05, 0, 0, 0, 1], name=f'Particle-{self.iteration}', template='Rigid3d')
+		Mass = newSphere.addObject('UniformMass', totalMass=0.01)
+		Force = newSphere.addObject('ConstantForceField', name="CFF", totalForce=[0, 0, 0, 0, 0, 0] )
+		Sphere = newSphere.addObject('SphereCollisionModel', name="SCM", radius=0.02 )
         
 		newSphere.init()
 		self.iteration = self.iteration+1
