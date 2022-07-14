@@ -2,7 +2,7 @@
 // Generate 9.5X9.5X2.5 cm Volumetric Mesh for Sofa Collision Model
 
 //define mesh size for the volumetric mesh
-lc = 1e-2;
+lc = 0.5*1e-2;
 
 Point(1) = {0,     0,     0,     lc};
 Point(2) = {0,     0,     0.095, lc};

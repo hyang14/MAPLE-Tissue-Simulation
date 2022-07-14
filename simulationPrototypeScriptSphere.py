@@ -28,18 +28,18 @@ def main():
 
 
 def createScene(root):
-	root.gravity = [0,-1,0]
-	root.dt = 0.02
+	root.gravity = [0,-9.81,0]
+	root.dt = 0.0001
         
 	root.addObject('DefaultVisualManagerLoop')
 	root.addObject('DefaultAnimationLoop')
 
-	root.addObject('VisualStyle', displayFlags="showCollisionModels showForceFields showMappings")
-	root.addObject('RequiredPlugin', pluginName="SofaImplicitOdeSolver SofaLoader SofaOpenglVisual SofaBoundaryCondition SofaGeneralLoader SofaGeneralSimpleFem SofaMeshCollision SofaEngine")
+	root.addObject('VisualStyle', displayFlags="hideCollisionModels showForceFields showMappings")
+	root.addObject('RequiredPlugin', pluginName="SofaImplicitOdeSolver SofaLoader SofaOpenglVisual SofaBoundaryCondition SofaGeneralLoader SofaGeneralSimpleFem SofaMeshCollision SofaEngine SofaConstraint SofaRigid")
 	root.addObject('DefaultPipeline', name="CollisionPipeline")
 	root.addObject('BruteForceDetection', name="N2")
 	root.addObject('DefaultContactManager', name="CollisionResponse", response="PenalityContactForceField")
-	root.addObject('NewProximityIntersection', name="Proximity", alarmDistance=0.5, contactDistance=0.25)
+	root.addObject('NewProximityIntersection', name="Proximity", alarmDistance=0.00001, contactDistance=0.000005)
 	root.addObject('DiscreteIntersection')
 	
 	confignode = root.addChild("Config")
@@ -47,7 +47,7 @@ def createScene(root):
     	
 	phantom = root.addChild('Phantom')
 	phantom.addObject('EulerImplicitSolver', name="cg_odesolver", rayleighStiffness=0.1, rayleighMass=0.1)
-	phantom.addObject('CGLinearSolver', name="linear_solver", iterations=25, tolerance=1e-09, threshold=1e-09)
+	phantom.addObject('CGLinearSolver', name="linear_solver", iterations=25, tolerance=1e-15, threshold=1e-20)
     	
 	phantom.addObject('MeshGmshLoader', name="meshLoader", filename="./phantom.msh")
 	phantom.addObject('MeshTopology', src="@meshLoader")
@@ -58,7 +58,7 @@ def createScene(root):
 	phantom.addObject('UniformMass', name="Mass", totalMass="0.22")
     	#human breast has poisson ratio of 0.5 according to  https://www.eng.tau.ac.il/~msbm/resources/55.PDF
     	#young's modulos = 200 kPa by assumption
-	phantom.addObject('TetrahedralCorotationalFEMForceField', template="Vec3d", name="FEM", method="large", poissonRatio=0.49, youngModulus=200000, computeGlobalMatrix=False)
+	phantom.addObject('TetrahedralCorotationalFEMForceField', template="Vec3d", name="FEM", method="large", poissonRatio=0.45, youngModulus=3000, computeGlobalMatrix=False)
 	phantom.addObject('BoxROI', template="Vec3d", box="-0.01 -0.00001 -0.01 0.1 0.00001 0.1", name="FixedROI", drawBoxes="1", drawSize="1")
 	phantom.addObject('FixedConstraint', name="fixROIindices", indices="@FixedROI.indices", showObject="True", drawSize="1")
 
@@ -77,34 +77,28 @@ def createScene(root):
 	
 	# add a floor to hold the droped object
 	
-	root.addObject(KeyPressedController(name = "SphereCreator"))
+	ball = root.addChild("Sphere")
+	ball.addObject('MechanicalObject', name="mstate", template="Rigid3", position=[0.05, 0.045, 0.05, 0, 0, 0, 1])
+	ball.addObject('UniformMass', totalMass=0.01)
+	ball.addObject('UncoupledConstraintCorrection')
+	
+	ball.addObject('EulerImplicitSolver', name='odesolver')
+	ball.addObject('CGLinearSolver', name='Solver', iterations=25, tolerance=1e-15, threshold=1e-20)
+	
+	ballCollision = ball.addChild('collision')
+	ballCollision.addObject('MeshOBJLoader', name="loader", filename="mesh/ball.obj", triangulate="true", scale=0.01)
+	
+	ballCollision.addObject('MeshTopology', src="@loader")
+	ballCollision.addObject('MechanicalObject')
+	
+	ballCollision.addObject('TriangleCollisionModel')
+	ballCollision.addObject('LineCollisionModel')
+	ballCollision.addObject('PointCollisionModel')
+	
+	ballCollision.addObject('RigidMapping')
 	
 	return root
-        
-
-class KeyPressedController(Sofa.Core.Controller):
-	def __init__(self, *args, **kwargs):
-		Sofa.Core.Controller.__init__(self, *args, **kwargs)
-		self.iteration = 0
-
-	def onKeypressedEvent(self, event):
-		# Press L key triggers the creation of new objects in the scene
-		if event['key']=='L':
-			self.createNewSphere()
-        
-            
-	def createNewSphere(self):
-		root = self.getContext()
-		newSphere = root.addChild('FallingSphere-'+str(self.iteration))
-		newSphere.addObject('EulerImplicitSolver')
-		newSphere.addObject('CGLinearSolver', threshold='1e-09', tolerance='1e-09', iterations='200')
-		MO = newSphere.addObject('MechanicalObject', showObject=True, position=[0.05, 0.5, 0.05, 0, 0, 0, 1], name=f'Particle-{self.iteration}', template='Rigid3d')
-		Mass = newSphere.addObject('UniformMass', totalMass=0.01)
-		Force = newSphere.addObject('ConstantForceField', name="CFF", totalForce=[0, 0, 0, 0, 0, 0] )
-		Sphere = newSphere.addObject('SphereCollisionModel', name="SCM", radius=0.02 )
-        
-		newSphere.init()
-		self.iteration = self.iteration+1
+  
         
 if __name__ == '__main__':
     main()
